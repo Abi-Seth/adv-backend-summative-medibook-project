@@ -1,3 +1,91 @@
+# MediBook
+
+A clinic appointment booking backend built with Node.js, Express, MySQL, and Redis.
+
+## Current progress: Day 1
+
+The Express application, MySQL and Redis connections, health route, and basic error handling are ready. The database tables and appointment features will be added in later steps. The original assessment instructions are preserved below.
+
+## Requirements
+
+- Node.js 24 LTS and npm
+- MySQL 8.4, running locally
+- Redis, running locally
+
+## Setup
+
+1. Install the packages:
+
+   ```bash
+   npm install
+   ```
+
+2. Create the local environment file:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Update the MySQL username and password in `.env` to match your installation. Change the hosts and ports if your services use different ones. Keep `.env` out of Git; `.env.example` contains the settings to copy.
+
+3. Start MySQL and Redis using your local installation. Create the empty database:
+
+   ```bash
+   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS medibook;"
+   ```
+
+   Day 1 only needs this empty database. The schema and seed scripts come next.
+
+4. Start the API:
+
+   ```bash
+   npm start
+   ```
+
+   The application checks MySQL and Redis before listening. If either connection fails, it prints an error and exits. Check the service and `.env` settings, then restart the API.
+
+5. Check the route:
+
+   ```bash
+   curl http://localhost:3000/health
+   ```
+
+   Expected response:
+
+   ```json
+   { "message": "MediBook API is running" }
+   ```
+
+   This route checks that the API is running. Database connections are checked at startup.
+
+## Development
+
+```bash
+npm run dev
+```
+
+Node.js watch mode restarts the API when source files change. Press Ctrl+C to stop it.
+
+## Structure
+
+```text
+database/                 Schema and seed scripts will go here
+src/
+  app.js                  Express middleware and routes
+  server.js               Connection checks and server startup
+  config/                 MySQL and Redis clients
+  controllers/            Request handling
+  middleware/             Central error handler
+  models/                 Application SQL will go here
+  routes/                 URL and HTTP method definitions
+```
+
+Unknown routes return JSON with status 404. Malformed JSON bodies return status 400. Unexpected request errors return a generic 500 response.
+
+The current packages are `express`, `mysql2`, `dotenv`, and `ioredis`. Development restarts use Node.js built-in watch mode. Queue processing and Jest tests will be added with the relevant features.
+
+---
+
 # Final Assessment — Backend Development
 
 **Weight:** 30% of final grade
