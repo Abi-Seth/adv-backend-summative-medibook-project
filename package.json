@@ -6,15 +6,24 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "worker": "node src/worker.js",
+    "test": "jest --runInBand",
+    "retry-jobs": "node src/retryJobs.js"
   },
   "engines": {
     "node": ">=24"
   },
   "dependencies": {
+    "@bull-board/api": "^9.14.0",
+    "@bull-board/express": "^9.14.0",
+    "bullmq": "^5.0.0",
     "dotenv": "^17.4.2",
     "express": "^5.3.0",
     "ioredis": "^5.11.1",
     "mysql2": "^3.24.6"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
   }
 }
