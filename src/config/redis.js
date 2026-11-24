@@ -6,7 +6,7 @@ const redis = new Redis({
   lazyConnect: true,
   connectTimeout: 5000,
   maxRetriesPerRequest: 1,
-  retryStrategy: () => null,
+  retryStrategy: (attempt) => Math.min(attempt * 100, 2000),
 });
 
 redis.on('error', (error) => {
