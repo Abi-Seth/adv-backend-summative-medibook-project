@@ -2,9 +2,9 @@
 
 A clinic appointment booking backend built with Node.js, Express, MySQL, and Redis.
 
-## Current progress: Day 1
+## Current progress: Day 2
 
-The Express application, MySQL and Redis connections, health route, and basic error handling are ready. The database tables and appointment features will be added in later steps. The original assessment instructions are preserved below.
+The Express setup and database design are ready. The database has exactly three tables: patients, doctors, and appointments. The schema, sample data, and diagram are included. CRUD and appointment workflows come next. The original assessment instructions are preserved below.
 
 ## Requirements
 
@@ -28,13 +28,14 @@ The Express application, MySQL and Redis connections, health route, and basic er
 
    Update the MySQL username and password in `.env` to match your installation. Change the hosts and ports if your services use different ones. Keep `.env` out of Git; `.env.example` contains the settings to copy.
 
-3. Start MySQL and Redis using your local installation. Create the empty database:
+3. Start MySQL and Redis using your local installation. From the project root, create the database and load the sample data:
 
    ```bash
-   mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS medibook;"
+   mysql -u root -p < database/schema.sql
+   mysql -u root -p < database/seed.sql
    ```
 
-   Day 1 only needs this empty database. The schema and seed scripts come next.
+   Run these scripts once on a fresh database. The schema creates `medibook` and its tables; the seed script expects empty tables. If you already created an empty `medibook` database during Day 1, that works too. Neither script deletes existing data. Use your configured MySQL username if it is not `root`.
 
 4. Start the API:
 
@@ -69,7 +70,7 @@ Node.js watch mode restarts the API when source files change. Press Ctrl+C to st
 ## Structure
 
 ```text
-database/                 Schema and seed scripts will go here
+database/                 schema.sql and seed.sql
 src/
   app.js                  Express middleware and routes
   server.js               Connection checks and server startup
@@ -83,6 +84,48 @@ src/
 Unknown routes return JSON with status 404. Malformed JSON bodies return status 400. Unexpected request errors return a generic 500 response.
 
 The current packages are `express`, `mysql2`, `dotenv`, and `ioredis`. Development restarts use Node.js built-in watch mode. Queue processing and Jest tests will be added with the relevant features.
+
+## Database design
+
+View [the PDF diagram](schema-diagram.pdf) or the preview below. It includes every column, data type, primary/foreign key, relationship, and constraint from `database/schema.sql`.
+
+![MediBook database schema](schema-diagram.png)
+
+- `patients` stores each patient's name, unique email, and phone.
+- `doctors` stores each doctor's name, specialty, consultation fee, and room. Specialty and room describe the doctor in this small clinic; neither is treated as a separate lookup entity.
+- `appointments` links one patient to one doctor and stores the appointment time, payment, booking time, and cancellation/refund details. Each patient and doctor can have zero or many appointments.
+
+The design follows 3NF: each field holds one value, patient and doctor details are stored once under their own keys, and appointments reference those records instead of copying their details. `amount_paid` records an actual payment, which can differ from the doctor's current fee. Refund details belong to the cancelled appointment, so no fourth table is needed. Money uses `DECIMAL(10, 2)`.
+
+### Preventing duplicate slots while retaining cancellations
+
+`active_slot` is a generated value: it equals `appointment_datetime` for a confirmed booking and becomes `NULL` for a cancelled booking. It is computed by MySQL, not supplied by the application.
+
+The unique constraint on `(doctor_id, active_slot)` allows only one confirmed booking for a doctor at a given time. MySQL allows multiple `NULL` values in a unique index, so cancelled rows remain available for refund history and the same slot can be booked again, including after repeated cancellations. The virtual column is an index helper, not a separately stored fact.
+
+References: [MySQL generated columns](https://dev.mysql.com/doc/refman/8.4/en/create-table-generated-columns.html) and [unique indexes](https://dev.mysql.com/doc/refman/8.4/en/create-index.html).
+
+### Rules enforced by the schema
+
+- Required fields cannot be `NULL`; patient emails and appointment references must be unique.
+- Foreign keys require an existing patient and doctor. Referenced patients and doctors cannot be deleted or have their IDs changed.
+- Consultation fees and payments cannot be negative. A refund must be between zero and the amount paid.
+- Confirmed bookings have no cancellation time and zero refund. Cancelled bookings require a cancellation time.
+- Appointment starts are on a 30-minute boundary from 09:00 through 16:30, with zero seconds.
+- A doctor cannot have two confirmed appointments at the same date and time.
+
+The future-date rule, concurrent enforcement of the 12-per-day limit, and refund percentages will be implemented in the later booking/cancellation steps. They are not enforced by this schema alone. Cancellation and refund changes will update the same appointment row inside a transaction. The waitlist will live in Redis.
+
+### Sample data
+
+`database/seed.sql` loads 3 patients, 3 doctors, and 13 appointments in one transaction:
+
+- Dr. Boateng has 11 confirmed appointments three days after the seed runs, leaving one place under the daily cap of 12.
+- Dr. Adjei has one confirmed appointment four days after the seed runs, with a partial payment of 80.00 against a 100.00 fee.
+- Dr. Mensah has no appointments, for testing the later all-doctors report.
+- One cancelled appointment keeps a full refund of 150.00. Its 09:00 slot is already rebooked by a different patient.
+
+The dates are relative to the MySQL session's current date so the sample bookings start in the future. Re-running the seed script on populated tables will report duplicate IDs; it is not a reset script.
 
 ---
 
