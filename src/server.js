@@ -3,6 +3,7 @@ require('dotenv').config({ quiet: true });
 const app = require('./app');
 const db = require('./config/db');
 const redis = require('./config/redis');
+const { closeQueue } = require('./services/jobQueue');
 
 const port = Number(process.env.PORT || 3000);
 
@@ -16,9 +17,18 @@ async function startServer() {
     await redis.ping();
     console.log('Redis connected');
 
-    app.listen(port, () => {
+    const server = app.listen(port, () => {
       console.log(`MediBook API running on http://localhost:${port}`);
     });
+    async function stop() {
+      server.close(async () => {
+        await closeQueue();
+        redis.disconnect();
+        await db.end();
+      });
+    }
+    process.once('SIGINT', stop);
+    process.once('SIGTERM', stop);
   } catch (error) {
     console.error('Unable to start MediBook:', error.message);
     redis.disconnect();
