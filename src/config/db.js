@@ -7,6 +7,7 @@ const db = mysql.createPool({
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'medibook',
   connectionLimit: 5,
+  dateStrings: true,
 });
 
 module.exports = db;
