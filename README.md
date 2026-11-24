@@ -2,6 +2,10 @@
 
 A clinic appointment booking backend built with Node.js, Express, MySQL, and Redis.
 
+## Video walkthrough
+
+[Watch the MediBook video walkthrough on YouTube](https://youtu.be/HVG6QxAxj3A)
+
 ## Current progress: Day 2
 
 The Express setup and database design are ready. The database has exactly three tables: patients, doctors, and appointments. The schema, sample data, and diagram are included. CRUD and appointment workflows come next. The original assessment instructions are preserved below.
